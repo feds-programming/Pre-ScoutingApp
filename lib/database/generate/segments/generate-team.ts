@@ -3,6 +3,7 @@
 import {ActionResult} from "@/lib/database/action-result";
 import prisma from "@/lib/prisma";
 import {statbotics} from "@/lib/statbotics/statbotics";
+import { meanOrNumber, seasonWins, seasonWinrate, seasonTies, seasonLosses } from '@/lib/statbotics/normalize';
 import {tba} from "@/lib/tba/tba";
 import GenerateTeamEvents from "@/lib/database/generate/segments/generate-team-events";
 import GeneratePastSeasons from "@/lib/database/generate/segments/generate-past-seasons";
@@ -45,22 +46,22 @@ export default async function GenerateTeam(tbaTeam: any, eventId: number, year: 
         eventId: eventId,
         name: tbaTeam.nickname,
         teamNumber: tbaTeam.team_number,
-        wins: stats.data.record.season.wins,
-        ties: stats.data.record.season.ties,
-        losses: stats.data.record.season.losses,
-        worldRank: stats.data.epa.ranks.total.rank,
-        worldTotal: stats.data.epa.ranks.total.team_count,
-        countyRank: stats.data.epa.ranks.country.rank,
-        countyTotal: stats.data.epa.ranks.country.team_count,
-        districtRank: stats.data.epa.ranks.district.rank,
-        districtTotal: stats.data.epa.ranks.district.team_count,
+    wins: seasonWins(stats.data),
+    ties: seasonTies(stats.data),
+    losses: seasonLosses(stats.data),
+      worldRank: stats.data?.epa?.ranks?.total?.rank ?? null,
+      worldTotal: stats.data?.epa?.ranks?.total?.team_count ?? null,
+      countyRank: stats.data?.epa?.ranks?.country?.rank ?? null,
+      countyTotal: stats.data?.epa?.ranks?.country?.team_count ?? null,
+      districtRank: stats.data?.epa?.ranks?.district?.rank ?? null,
+      districtTotal: stats.data?.epa?.ranks?.district?.team_count ?? null,
         eventTotal: totalTeams,
-        autoEPA: stats.data.epa.breakdown.auto_points.mean,
-        teleopEPA: stats.data.epa.breakdown.teleop_points.mean,
-        endgameEPA: stats.data.epa.breakdown.endgame_points.mean,
-        totalEPA: (stats.data.epa.breakdown.auto_points.mean ?? 0) +
-              (stats.data.epa.breakdown.teleop_points.mean ?? 0) +
-              (stats.data.epa.breakdown.endgame_points.mean ?? 0)
+      autoEPA: meanOrNumber(stats.data?.epa?.breakdown?.auto_points),
+      teleopEPA: meanOrNumber(stats.data?.epa?.breakdown?.teleop_points),
+      endgameEPA: meanOrNumber(stats.data?.epa?.breakdown?.endgame_points),
+      totalEPA: meanOrNumber(stats.data?.epa?.breakdown?.auto_points) +
+          meanOrNumber(stats.data?.epa?.breakdown?.teleop_points) +
+          meanOrNumber(stats.data?.epa?.breakdown?.endgame_points)
     }
 
     let teamEntry = await prisma.teamEntry.findFirst({

@@ -22,45 +22,39 @@ export default async function GenerateMatches(tbaMatch: any, statboticsMatch: an
         videoId: tbaMatch.videos?.find((x: { type: string }) => x.type == "youtube")?.key
     }
 
-    if ((await prisma.match.findFirst({
-        where: {
-            key: tbaMatch.key
-        }
-    }))) {
-        await prisma.match.updateMany(
-              {
-                  where: {
-                      key: tbaMatch.key
-                  },
-                  data
-              }
-        )
-    } else {
-        await prisma.match.create({data});
-    }
+    await prisma.match.upsert({
+        where: { key: tbaMatch.key },
+        update: data,
+        create: data
+    });
 
-    if ((await prisma.matchEntry.findFirst(
-          {
-              where: {
-                  teamEntryId: teamEntryId,
-                  matchKey: tbaMatch.key
-              }
-          }
-    )) == undefined)
-    await prisma.matchEntry.create(
-          {
-              data: {
-                  teamEntryId: teamEntryId,
-                  totalEPA: statboticsMatch?.total_points ?? -1,
-                  autoEPA: statboticsMatch?.auto_points ?? -1,
-                  teleopEPA: statboticsMatch?.teleop_points ?? -1,
-                  endgameEPA: statboticsMatch?.endgame_points ?? -1,
-                  status: "notStarted",
-                  eventId: eventId,
-                  matchKey: tbaMatch.key
-              }
-          }
-    );
+    const matchEntryUpdate = await prisma.matchEntry.updateMany({
+        where: {
+            teamEntryId: teamEntryId,
+            matchKey: tbaMatch.key
+        },
+        data: {
+            totalEPA: statboticsMatch?.total_points ?? -1,
+            autoEPA: statboticsMatch?.auto_points ?? -1,
+            teleopEPA: statboticsMatch?.teleop_points ?? -1,
+            endgameEPA: statboticsMatch?.endgame_points ?? -1,
+        }
+    });
+    
+    if (matchEntryUpdate.count === 0) {
+        await prisma.matchEntry.create({
+            data: {
+                teamEntryId: teamEntryId,
+                totalEPA: statboticsMatch?.total_points ?? -1,
+                autoEPA: statboticsMatch?.auto_points ?? -1,
+                teleopEPA: statboticsMatch?.teleop_points ?? -1,
+                endgameEPA: statboticsMatch?.endgame_points ?? -1,
+                status: "notStarted",
+                eventId: eventId,
+                matchKey: tbaMatch.key
+            }
+        });
+    }
 
     return {success: true};
 }
